@@ -1,6 +1,6 @@
-import fs from 'fs'
+const { readFileSync } = require('fs')
 
-const input = fs.readFileSync('./input.txt', 'utf-8')
+const input = readFileSync('./input.txt', 'utf-8')
 
 const elves = input.split(/\r?\n\r?\n/)
 
