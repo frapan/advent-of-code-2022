@@ -1,6 +1,6 @@
 const { readFileSync } = require('fs')
 
-const AREA_SIZE = 20
+const AREA_SIZE = 4000000
 
 const input = readFileSync('./input.txt', 'utf-8')
 
@@ -32,7 +32,10 @@ for (const { sensor, beacon } of sensorsAndBeacons) {
     if (horizontalSegments[y]) {
       for (let i = horizontalSegments[y].length - 1; i >= 0; i--) {
         const segment = horizontalSegments[y][i]
-        const overlaps = (segment[1] >= startX && segment[1] < endX) || (segment[0] >= startX && segment[0] < endX)
+        const overlaps = 
+          (segment[1] >= startX - 1 && segment[1] <= endX + 1) || 
+          (segment[0] >= startX - 1 && segment[0] <= endX + 1) ||
+          (startX >= segment[0] - 1 && endX <= segment[1] + 1)
         if (overlaps) {
           startX = Math.min(startX, segment[0])
           endX = Math.max(endX, segment[1])
@@ -46,4 +49,6 @@ for (const { sensor, beacon } of sensorsAndBeacons) {
   }  
 }
 
-console.log(horizontalSegments.map((s, i) => i + ') ' + s).join('\n'))
+const resultY = horizontalSegments.findIndex(segments => segments.length > 1)
+const resultX = horizontalSegments[resultY][0][1] + 1
+console.log(resultX * 4000000 + resultY)
