@@ -16,7 +16,7 @@ const shapes = [
   [[1, 1], [1, 1]]
 ]
 
-const MAX_ROCK_COUNT = 2022
+const MAX_ROCK_COUNT = 1000000000000
 
 const detectCollisionWithFloor = (rock) => {
   if (rock.bottomYCoord > floor.length) {
@@ -47,7 +47,7 @@ function moveHorizontally(rock) {
       return
     }
     for (let y = 0; y < rock.shape.length; y++) {
-      for (let x = rock.shape[0].length - 1; x > 1; x--) {
+      for (let x = rock.shape[0].length - 1; x >= 0; x--) {
         if (rock.shape[y][x]) {
           if (floor[rock.bottomYCoord + y] && floor[rock.bottomYCoord + y][x + rock.xCoord + 1]) {
             return
