@@ -132,20 +132,20 @@ for (const startValve of valvesWithFlowRate) {
 
 const TIME_TO_OPEN_VALVE = 1
 
-const getMaxFlowPath = (path, remainingMinutes) => {
+const getMaxFlowPath = (path, remainingMinutes, availableValves) => {
   if (remainingMinutes <= 0) {
     return [[], 0]
   }
   const lastValveName = path[path.length - 1] 
   let bestPath = [lastValveName]
   let bestPathFlowRate = 0
-  for (let i = 0; i < valvesWithFlowRate.length; i++) {
-    const nextValveName = valvesWithFlowRate[i]
+  for (let i = 0; i < availableValves.length; i++) {
+    const nextValveName = availableValves[i]
     if (nextValveName !== lastValveName && !path.includes(nextValveName)) {
       const newRemainingMinutes = remainingMinutes - distancesBetweenValves[lastValveName + '-' + nextValveName] - TIME_TO_OPEN_VALVE
       const newPathFlowRate = newRemainingMinutes * valves[nextValveName].flowRate
       const newPath = path.concat(nextValveName)
-      const [childPath, childPathFlowRate] = getMaxFlowPath(newPath, newRemainingMinutes)
+      const [childPath, childPathFlowRate] = getMaxFlowPath(newPath, newRemainingMinutes, availableValves)
       const currentBestFlowRate = newPathFlowRate + childPathFlowRate
       if (currentBestFlowRate > bestPathFlowRate) {
         bestPathFlowRate = currentBestFlowRate
@@ -156,4 +156,50 @@ const getMaxFlowPath = (path, remainingMinutes) => {
   return [ bestPath, bestPathFlowRate ]
 }
 
-console.log(getMaxFlowPath(['AA'], 30))
+
+function getCombinations(valuesArray)
+{
+
+  const combi = [];
+  let temp = [];
+  const slent = Math.pow(2, valuesArray.length);
+
+  for (let i = 0; i < slent; i++)
+  {
+    temp = [];
+    for (let j = 0; j < valuesArray.length; j++)
+    {
+      if ((i & Math.pow(2, j)))
+      {
+        temp.push(valuesArray[j]);
+      }
+    }
+    if (temp.length > 0)
+    {
+      combi.push(temp);
+    }
+  }
+
+  combi.sort((a, b) => a.length - b.length);
+  // console.log(combi.join("\n"));
+  return combi;
+}
+
+const half = Math.floor(valvesWithFlowRate.length / 2)
+
+const goodGroups = getCombinations(valvesWithFlowRate).filter(group => group.length === half)
+
+let bestFlowRate = 0
+let myBestPath, elephantBestPath
+for (const myGroup of goodGroups) {
+  const elephantGroup = valvesWithFlowRate.filter(v => !myGroup.includes(v))
+  const [ myPath, myPathFlowRate ] = getMaxFlowPath(['AA'], 26, myGroup)
+  const [ elephantPath, elephantPathFlowRate ] = getMaxFlowPath(['AA'], 26, elephantGroup)
+  const sum = myPathFlowRate + elephantPathFlowRate
+  if (sum > bestFlowRate) {
+    bestFlowRate = sum
+    myBestPath = myPath
+    elephantBestPath = elephantPath
+  }
+}
+console.log({bestFlowRate, myBestPath, elephantBestPath})
