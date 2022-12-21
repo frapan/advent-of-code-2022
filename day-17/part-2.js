@@ -10,27 +10,21 @@ const gas = input.split('')
 let gasLength = gas.length
 let gasIndex = 0
 
-const toBinary = (arr) => arr.reverse().reduce((acc, val, i) => acc + val * 2 ** (i * 7), 0)
+const toBinary = (arr) => arr.reverse().reduce((acc, val, i) => acc + val * 2 ** i, 0)
 
 const COLUMNS = 7
-let floor = [0b1111111]
+let floor = [toBinary([1, 1, 1, 1, 1, 1, 1])]
 let floorCuts = 0
 
-const exp7 = 2 ** 7
-const exp14 = 2 ** 14
-const exp21 = 2 ** 21
-const exp28 = 2 ** 28
+// let history = []
 
 const shapes = [
-  [0b0011110],
-  [toBinary([0b0001000, 0b0011100, 0b0001000])],
-  [toBinary([0b0000100, 0b0000100, 0b0011100])],
-  [toBinary([0b0010000, 0b0010000, 0b0010000, 0b0010000])],
-  [toBinary([0b0011000, 0b0011000])],
+  [toBinary([0, 0, 1, 1, 1, 1, 0])],
+  [toBinary([0, 0, 0, 1, 0, 0, 0]), toBinary([0, 0, 1, 1, 1, 0, 0]), toBinary([0, 0, 0, 1, 0, 0, 0])],
+  [toBinary([0, 0, 1, 1, 1, 0, 0]), toBinary([0, 0, 0, 0, 1, 0, 0]), toBinary([0, 0, 0, 0, 1, 0, 0])],
+  [toBinary([0, 0, 1, 0, 0, 0, 0]), toBinary([0, 0, 1, 0, 0, 0, 0]), toBinary([0, 0, 1, 0, 0, 0, 0]), toBinary([0, 0, 1, 0, 0, 0, 0])],
+  [toBinary([0, 0, 1, 1, 0, 0, 0]), toBinary([0, 0, 1, 1, 0, 0, 0])]
 ]
-
-const moveRightCheck = toBinary([1, 1, 1, 1])
-const moveLeftCheck = toBinary([0b1000000, 0b1000000, 0b1000000, 0b1000000])
 
 const printFloor = () => {
   for (let i = floor.length - 1; i >= 0 ; i--) {
@@ -42,56 +36,55 @@ const detectCollisionWithFloor = (shape, shapeBottomYCoord) => {
   if (shapeBottomYCoord > floor.length) {
     return false
   }
-  const floorBits = toBinary([floor[shapeBottomYCoord + 3] || 0, floor[shapeBottomYCoord + 2] || 0, floor[shapeBottomYCoord + 1] || 0, floor[shapeBottomYCoord]])
-  return (shape & floorBits) > 0
+  return shape.some((row, i) => (row & floor[shapeBottomYCoord + i]) > 0)
 }
 
-function moveHorizontally(rock) {
-  const dir = gas[gasIndex]
-  gasIndex++
+function moveHorizontally(rock, detectCollision) {
+  const dir = gas[gasIndex++]
   if (gasIndex === gasLength) {
     gasIndex = 0
   }
   let newShape
   if (dir === '>') {
-    if ((rock.shape & moveRightCheck) > 0) {
+    if (rock.shape.some(row => (row % 2) === 1)) {
       return
     }
-    // newShape = rock.shape.map(row => row / 2)
-    const shapeStr = Number(rock.shape).toString(2).padStart(28, '0')
-    newShape = toBinary([Number('0b' + shapeStr.substring(0, 7)) / 2, Number('0b' + shapeStr.substring(7, 14)) / 2, Number('0b' + shapeStr.substring(14, 21)) / 2, Number('0b' + shapeStr.substring(21, 28)) / 2])
+    newShape = rock.shape.map(row => row / 2)
   } else {
-    if ((rock.shape & moveLeftCheck) > 0) {
+    if (rock.shape.some(row => row >= 64)) {
       return
     }
-    // newShape = rock.shape.map(row => row * 2)
-    const shapeStr = Number(rock.shape).toString(2).padStart(28, '0')
-    newShape = toBinary([Number('0b' + shapeStr.substring(0, 7)) * 2, Number('0b' + shapeStr.substring(7, 14)) * 2, Number('0b' + shapeStr.substring(14, 21)) * 2, Number('0b' + shapeStr.substring(21, 28)) * 2])
+    newShape = rock.shape.map(row => row * 2)
   }
-  if (!detectCollisionWithFloor(newShape, rock.bottomYCoord)) {
+  if (!detectCollision || !detectCollisionWithFloor(newShape, rock.bottomYCoord)) {
     rock.shape = newShape
   }
 }
 
 for (let rockCount = 0; rockCount < MAX_ROCK_COUNT; rockCount++) {
-  if (rockCount % 1000 === 0) {
-    console.log(rockCount, floorCuts)
+  if (rockCount % 100000000 === 0) {
+    console.log(new Date(), rockCount, floorCuts)
   }
   const rock = {
     bottomYCoord: floor.length + 3,
     shape: shapes[rockCount % shapes.length]
   }
+  // history.push({ rockCount, shapeIndex: rockCount % shapes.length, gasIndex})
+  moveHorizontally(rock, false)
+  moveHorizontally(rock, false)
+  rock.bottomYCoord -= 2
   let collide = false
   while (!collide) {
-    moveHorizontally(rock)
+    moveHorizontally(rock, true)
     let newBottomYCoord = rock.bottomYCoord - 1
     collide = detectCollisionWithFloor(rock.shape, newBottomYCoord)
     if (collide) {
-      let tmp = rock.shape
-      let y = 0
-      while (tmp > 0) {
-        floor[rock.bottomYCoord + y] = floor[rock.bottomYCoord + y++] | tmp % exp7
-        tmp = Math.floor(tmp / exp7)
+      for (let y = 0; y < rock.shape.length; y++) {
+        floor[rock.bottomYCoord + y] = floor[rock.bottomYCoord + y] | rock.shape[y]
+      }
+      // if (floor[floor.length - 1] > 16 + 32 + 64 && gasIndex === 0) { // Per il mio input 
+      if (floor[floor.length - 1] > 1 + 32 + 64) { // Per l'input di test
+        console.log(new Date(), rockCount, floorCuts, floor.length, floorCuts * KEEP_FLOOR_ROWS + floor.length - 1, '**********', gasIndex, floor[floor.length - 1])
       }
       if (floor.length > KEEP_FLOOR_ROWS * 2) {
         floor = floor.slice(KEEP_FLOOR_ROWS)
@@ -105,3 +98,4 @@ for (let rockCount = 0; rockCount < MAX_ROCK_COUNT; rockCount++) {
 }
 
 console.log(floorCuts * KEEP_FLOOR_ROWS + floor.length - 1, floorCuts)
+// printFloor()
