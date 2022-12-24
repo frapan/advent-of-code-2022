@@ -2,10 +2,25 @@ const {readFileSync} = require('fs')
 
 const input = readFileSync('./input.txt', 'utf-8')
 
-const oreRequirements = {ore: 4}
-const clayRequirements = {ore: 2}
-const obsidianRequirements = {ore: 3, clay: 14}
-const geodeRequirements = {ore: 2, obsidian: 7}
+const blueprints = input.split(/\n/).map(line => {
+  const number = Number(line.match(/Blueprint (\d+):/)[1])
+  const ores = line.match(/ (\d+) ore/g).map(n => parseInt(n, 10))
+  const clay = Number(line.match(/ (\d+) clay/)[1])
+  const obsidian = Number(line.match(/ (\d+) obsidian/)[1])
+  const maxRequiredOre = Math.max(...ores)
+  return {
+    number,
+    oreRequirements: { ore: ores[0] },
+    clayRequirements: { ore: ores[1] },
+    obsidianRequirements: { ore: ores[2], clay },
+    geodeRequirements: { ore: ores[2], obsidian },
+    maxRequiredOre,
+  }
+})
+// const oreRequirements = {ore: 4}
+// const clayRequirements = {ore: 2}
+// const obsidianRequirements = {ore: 3, clay: 14}
+// const geodeRequirements = {ore: 2, obsidian: 7}
 // const oreRequirements = {ore: 2}
 // const clayRequirements = {ore: 3}
 // const obsidianRequirements = {ore: 3, clay: 8}
@@ -13,86 +28,129 @@ const geodeRequirements = {ore: 2, obsidian: 7}
 
 const materials = ['geode', 'obsidian', 'clay', 'ore']
 
-const bag = {
-  ore: 0, clay: 0, obsidian: 0, geode: 0
+const getNewConfig = (config, blueprint) => {
+  const newConfigBase = {
+    ...config,
+    minute: config.minute + 1,
+    bag: { ... config.bag },
+    robots: { ... config.robots },
+    robotsUnderConstruction: { ... config.robotsUnderConstruction },
+  }
+  
+  materials.forEach(material => {
+    if (newConfigBase.robotsUnderConstruction[material] > 0) {
+      newConfigBase.robotsUnderConstruction[material] = 0
+      newConfigBase.robots[material]++
+    }
+  })
+  
+  materials.forEach(material => newConfigBase.bag[material] += newConfigBase.robots[material])
+
+  if (config.minute === 24) {
+    return newConfigBase.bag.geode
+  }
+
+  const possibleNewConfigs = []
+  if (config.bag.obsidian >= blueprint.geodeRequirements.obsidian && config.bag.ore >= blueprint.geodeRequirements.ore) {
+    possibleNewConfigs.push({
+      ...newConfigBase,
+      bag: {
+        ...newConfigBase.bag,
+        ore: newConfigBase.bag.ore - blueprint.geodeRequirements.ore,
+        obsidian: newConfigBase.bag.obsidian - blueprint.geodeRequirements.obsidian,
+      },
+      robotsUnderConstruction: {
+        ...newConfigBase.robotsUnderConstruction,
+        geode: 1
+      }
+    })
+    return getNewConfig(possibleNewConfigs[0], blueprint)
+  }
+  let missingOreToCreateGeode = 0
+  if (config.bag.obsidian === blueprint.geodeRequirements.obsidian) {
+    missingOreToCreateGeode = blueprint.geodeRequirements.ore - config.bag.ore
+  }
+
+  if (config.bag.clay >= blueprint.obsidianRequirements.clay && config.bag.ore - missingOreToCreateGeode >= blueprint.obsidianRequirements.ore) {
+    possibleNewConfigs.push({
+      ...newConfigBase,
+      bag: {
+        ...newConfigBase.bag,
+        ore: newConfigBase.bag.ore - blueprint.obsidianRequirements.ore,
+        clay: newConfigBase.bag.clay - blueprint.obsidianRequirements.clay,
+      },
+      robotsUnderConstruction: {
+        ...newConfigBase.robotsUnderConstruction,
+        obsidian: 1
+      }
+    })
+    return getNewConfig(possibleNewConfigs[0], blueprint)
+  }
+  let missingOreToCreateObsidian = 0
+  if (config.bag.clay === blueprint.obsidianRequirements.clay) {
+    missingOreToCreateObsidian = blueprint.obsidianRequirements.ore - config.bag.ore
+  }
+  
+  if (config.bag.ore - Math.max(missingOreToCreateGeode, missingOreToCreateObsidian) >= blueprint.clayRequirements.ore) {
+    possibleNewConfigs.push({
+      ...newConfigBase,
+      bag: {
+        ...newConfigBase.bag,
+        ore: newConfigBase.bag.ore - blueprint.clayRequirements.ore,
+      },
+      robotsUnderConstruction: {
+        ...newConfigBase.robotsUnderConstruction,
+        clay: 1
+      }
+    })
+  }
+
+  if (config.bag.ore - Math.max(missingOreToCreateGeode, missingOreToCreateObsidian) >= blueprint.oreRequirements.ore) {
+    possibleNewConfigs.push({
+      ...newConfigBase,
+      bag: {
+        ...newConfigBase.bag,
+        ore: newConfigBase.bag.ore - blueprint.oreRequirements.ore,
+      },
+      robotsUnderConstruction: {
+        ...newConfigBase.robotsUnderConstruction,
+        ore: 1
+      }
+    })
+  }
+
+  if (config.bag.ore < blueprint.maxRequiredOre * 2) {
+    possibleNewConfigs.push(newConfigBase)
+  }
+  
+  const geodesCount = possibleNewConfigs.map(config => getNewConfig(config, blueprint))
+  
+  return Math.max(...geodesCount)
 }
 
-const robots = {
-  ore: 1, clay: 0, obsidian: 0, geode: 0,
-}
-
-const collect = {
-  ore: () => {
-    if (bag.ore >= oreRequirements.ore) {
-      const minutesToNextGeodeCreation = Math.ceil((geodeRequirements.obsidian - bag.obsidian) / robots.obsidian)
-      const keepOreToCreateGeode = geodeRequirements.ore > minutesToNextGeodeCreation
-  
-      const minutesToNextObsidianCreation = Math.ceil((obsidianRequirements.clay - bag.clay) / robots.clay)
-      const keepOreToCreateObsidian = obsidianRequirements.ore > minutesToNextObsidianCreation
-  
-      const keepOreToCreateClay = robots.ore > Math.ceil(clayRequirements.ore / oreRequirements.ore)
-      // const minutesToNextClayCreation = Math.ceil((clayRequirements.ore - bag.ore) / robots.ore)
-      // const keepOreToCreateClay = clayRequirements.ore > minutesToNextClayCreation
-  
-      if (!keepOreToCreateObsidian && !keepOreToCreateGeode && !keepOreToCreateClay) {
-        createRobotCountdown.ore = 0
-        bag.ore = bag.ore - oreRequirements.ore
-      }
-    }
-    bag.ore += robots.ore
-  }, clay: () => {
-    if (bag.ore >= clayRequirements.ore) {
-      const minutesToNextGeodeCreation = Math.ceil((geodeRequirements.obsidian - bag.obsidian) / robots.obsidian)
-      const keepOreToCreateGeode = geodeRequirements.ore > minutesToNextGeodeCreation
-      
-      const minutesToNextObsidianCreation = Math.ceil((obsidianRequirements.clay - bag.clay) / robots.clay)
-      const keepOreToCreateObsidian = obsidianRequirements.ore > minutesToNextObsidianCreation
-
-      if (!keepOreToCreateObsidian && !keepOreToCreateGeode) {
-        createRobotCountdown.clay = 0
-        bag.ore = bag.ore - clayRequirements.ore
-      }
-    }
-    bag.clay += robots.clay
-  }, obsidian: () => {
-    if (bag.ore >= obsidianRequirements.ore && bag.obsidian < geodeRequirements.obsidian && bag.clay >= obsidianRequirements.clay) {
-      const minutesToNextGeodeCreation = Math.ceil((geodeRequirements.obsidian - bag.obsidian) / robots.obsidian)
-      const keepOreToCreateGeode = geodeRequirements.ore > minutesToNextGeodeCreation
-
-      if (!keepOreToCreateGeode) {
-        createRobotCountdown.obsidian = 0
-        bag.ore = bag.ore - obsidianRequirements.ore
-        bag.clay = bag.clay - obsidianRequirements.clay
-      }
-    }
-    bag.obsidian += robots.obsidian
-  }, geode: () => {
-    if (bag.ore >= geodeRequirements.ore && bag.obsidian >= geodeRequirements.obsidian) {
-      createRobotCountdown.geode = 0
-      bag.ore = bag.ore - geodeRequirements.ore
-      bag.obsidian = bag.obsidian - geodeRequirements.obsidian
-    }
-    bag.geode += robots.geode
+const initialConfig = {
+  minute: 1,
+  bag: {
+    ore: 0,
+    clay: 0,
+    obsidian: 0,
+    geode: 0,
+  },
+  robots: {
+    ore: 1,
+    clay: 0,
+    obsidian: 0,
+    geode: 0,
+  },
+  robotsUnderConstruction: {
+    ore: 0,
+    clay: 0,
+    obsidian: 0,
+    geode: 0,
   },
 }
 
-const createRobotCountdown = {
-  ore: -1, clay: -1, obsidian: -1, geode: -1,
-}
-
-for (let minute = 1; minute <= 24; minute++) {
-  null
-  materials.forEach(material => {
-    collect[material]()
-    if (createRobotCountdown[material] >= 0) {
-      if (createRobotCountdown[material] === 0) {
-        robots[material]++
-      }
-      createRobotCountdown[material]--
-    }
-  })
-  console.log({minute, robots, bag})
-}
-
-console.log(robots)
-console.log(bag)
+const results = blueprints.reduce((acc, bp) => acc + bp.number * getNewConfig(initialConfig, bp), 0)
+console.log(results)
+// 577 too low
+// 600 is the right answer!
