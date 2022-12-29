@@ -15,7 +15,7 @@ const parseInput = input => {
     const [name, cmd] = line.split(': ')
     const node = {
       name,
-      parents: []
+      parentNode: null,
     }
     if (cmd.indexOf(' ') > 0) {
       const [left, opSymbol, right] = cmd.split(' ')
@@ -37,9 +37,9 @@ const makeLinks = nodes => {
     const node = nodes[nodeName]
     if (node.leftName) {
       node.left = nodes[node.leftName]
-      nodes[node.leftName].parents.push(node)
+      nodes[node.leftName].parentNode = node
       node.right = nodes[node.rightName]
-      nodes[node.rightName].parents.push(node)
+      nodes[node.rightName].parentNode = node
     }
   }
 }
@@ -47,19 +47,14 @@ const makeLinks = nodes => {
 const calculateRoot = (nodes, leaves) => {
   let node = leaves.shift()
   while (node) {
-    const parentsCount = node.parents.length
-    let parentsSolved = 0
-    for (const parentNode of node.parents) {
-      if (!parentNode.value && parentNode.left.value && parentNode.right.value) {
-        parentNode.value = parentNode.op(parentNode.left.value, parentNode.right.value)
-        if (parentNode.name === 'root') {
-          return parentNode.value
-        }
-        leaves.push(parentNode)
-        parentsSolved++
+    const parentNode = node.parentNode
+    if (!parentNode.value && parentNode.left.value && parentNode.right.value) {
+      parentNode.value = parentNode.op(parentNode.left.value, parentNode.right.value)
+      if (parentNode.name === 'root') {
+        return parentNode.value
       }
-    }
-    if (parentsCount > parentsSolved) {
+      leaves.push(parentNode)
+    } else {
       leaves.push(node)
     }
     node = leaves.shift()
