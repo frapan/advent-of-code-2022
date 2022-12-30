@@ -114,6 +114,10 @@ const invertOp = (currentNode, fromNode, invertedNodes, invertedLeaves) => {
       parentNode,
       value: fromNode.right.value,
     }
+    invertedNodes[parentNode.right.name] = parentNode.right
+    invertedLeaves.push(parentNode.right)
+    parentNode.leftName = currentNode.name
+    parentNode.left = currentNode
   } else {
     parentNode = {
       name: fromNode.right.name,
@@ -128,21 +132,35 @@ const invertOp = (currentNode, fromNode, invertedNodes, invertedLeaves) => {
     } else if (fromNode.opSymbol === '-') {
       parentNode.opSymbol = '-'
     }
-    parentNode.op = fns[parentNode.opSymbol]
-    parentNode.rightName = fromNode.left.name
-    parentNode.right = {
-      name: fromNode.left.name,
-      parentNode,
-      value: fromNode.left.value,
+    if (fromNode.opSymbol === '/' || fromNode.opSymbol === '-') {
+      parentNode.op = fns[parentNode.opSymbol]
+      parentNode.leftName = fromNode.left.name
+      parentNode.left = {
+        name: fromNode.left.name,
+        parentNode,
+        value: fromNode.left.value,
+      }
+      invertedNodes[parentNode.left.name] = parentNode.left
+      invertedLeaves.push(parentNode.left)
+      parentNode.rightName = currentNode.name
+      parentNode.right = currentNode
+    } else {
+      parentNode.op = fns[parentNode.opSymbol]
+      parentNode.rightName = fromNode.left.name
+      parentNode.right = {
+        name: fromNode.left.name,
+        parentNode,
+        value: fromNode.left.value,
+      }
+      invertedNodes[parentNode.right.name] = parentNode.right
+      invertedLeaves.push(parentNode.right)
+      parentNode.leftName = currentNode.name
+      parentNode.left = currentNode
     }
   }
 
-  parentNode.leftName = currentNode.name
-  parentNode.left = currentNode
   currentNode.parentNode = parentNode
   invertedNodes[parentNode.name] = parentNode
-  invertedNodes[parentNode.right.name] = parentNode.right
-  invertedLeaves.push(parentNode.right)
   return parentNode.name
 }
 
@@ -191,12 +209,10 @@ const humnValue = calculateHumn(invertedNodes, invertedLeaves)
 
 console.log(humnValue)
 
-const printNodes = nodes => {
-  Object.keys(nodes).sort().forEach(nodeName => {
-    const node = nodes[nodeName]
-    console.log(node.name, node.value, node.left?.name, node.opSymbol, node.right?.name)
-  })
-}
-
-printNodes(invertedNodes)
-// -3740214170598.308 wrong
+// const printNodes = nodes => {
+//   Object.keys(nodes).sort().forEach(nodeName => {
+//     const node = nodes[nodeName]
+//     console.log(node.name, node.value, node.left?.name, node.opSymbol, node.right?.name)
+//   })
+// }
+// printNodes(invertedNodes)
