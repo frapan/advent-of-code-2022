@@ -52,10 +52,11 @@ const printBoard = (blizzards, position, board, minute) => {
     console.log(area[y].slice(1).join(''))
   }
 }
+// printBoard(initialBlizzards, initialPosition, board, 0)
 
 
 const initialPosition = { x: 1, y: 0 }
-// printBoard(initialBlizzards, initialPosition, board, 0)
+const finalPosition = { x: board.maxX, y: board.maxY + 1 }
 
 const playerMoves = [
   { incX: 0, incY: 0 },
@@ -65,12 +66,20 @@ const playerMoves = [
   { incX: 1, incY: 0}, 
 ]
 
-const visited = new Set()
+const reversePlayerMoves = [
+  { incX: 0, incY: 0 },
+  { incX: 1, incY: 0}, 
+  { incX: 0, incY: 1}, 
+  { incX: 0, incY: -1}, 
+  { incX: -1, incY: 0}, 
+]
 
-const move = (initialPosition, initialBlizzards, initialMinute) => {
+const move = (initialPosition, initialBlizzards, initialMinute, finalPosition, orderedPlayerMoves) => {
   
-  let bestMinutes = Infinity
+  let bestMinutes = 2000
   let bestBlizzards = null
+
+  const visited = new Set()
 
   const firstMove = {
     position: initialPosition,
@@ -81,12 +90,11 @@ const move = (initialPosition, initialBlizzards, initialMinute) => {
   
   while (availableMoves.length) {
     const { position, blizzards, minute } = availableMoves.shift()
-    if (minute >= bestMinutes ||
-        (board.maxX - position.x) + (board.maxY - position.y) + minute >= bestMinutes) {
+    if (minute >= bestMinutes) {
       continue
     }
   
-    if (position.y === board.maxY && position.x === board.maxX) {
+    if (position.y === finalPosition.y && position.x === finalPosition.x) {
       bestMinutes = Math.min(bestMinutes, minute)
       bestBlizzards = blizzards
       console.log(`trovata soluzione in ${minute} minuti: ${new Date()}`)
@@ -112,10 +120,10 @@ const move = (initialPosition, initialBlizzards, initialMinute) => {
       newBlizzards.push(newBlizzard)
     }
   
-    for (const playerMove of playerMoves) {
+    for (const playerMove of orderedPlayerMoves) {
       const newPosition = { x: position.x + playerMove.incX, y: position.y + playerMove.incY }
       if (newPosition.y < board.minY || newPosition.y > board.maxY || newPosition.x < board.minX || newPosition.x > board.maxX) {
-        if (!(newPosition.y === 0 && newPosition.x === 1)) {
+        if (!(newPosition.y === 0 && newPosition.x === 1) && !(newPosition.y === board.maxY + 1 && newPosition.x === board.maxX)) {
           continue
         }
       }
@@ -133,6 +141,10 @@ const move = (initialPosition, initialBlizzards, initialMinute) => {
 }
 
 console.log('start: ' + new Date())
-const result = move(initialPosition, initialBlizzards, 1)
-console.log(result.minute)
+const result1 = move(initialPosition, initialBlizzards, 0, finalPosition, playerMoves)
+console.log(result1.minute)
+const result2 = move(finalPosition, result1.blizzards, result1.minute, initialPosition, reversePlayerMoves)
+console.log(result2.minute)
+const result3 = move(initialPosition, result2.blizzards, result2.minute, finalPosition, playerMoves)
+console.log(result3.minute)
 console.log('end: ' + new Date())
