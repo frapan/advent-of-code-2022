@@ -2,14 +2,14 @@ const {readFileSync} = require('fs')
 
 const input = readFileSync('./input.txt', 'utf-8')
 
-const oreRequirements = {ore: 4}
-const clayRequirements = {ore: 2}
-const obsidianRequirements = {ore: 3, clay: 14}
-const geodeRequirements = {ore: 2, obsidian: 7}
-// const oreRequirements = {ore: 2}
-// const clayRequirements = {ore: 3}
-// const obsidianRequirements = {ore: 3, clay: 8}
-// const geodeRequirements = {ore: 3, obsidian: 12}
+// const oreRequirements = {ore: 4}
+// const clayRequirements = {ore: 2}
+// const obsidianRequirements = {ore: 3, clay: 14}
+// const geodeRequirements = {ore: 2, obsidian: 7}
+const oreRequirements = {ore: 2}
+const clayRequirements = {ore: 3}
+const obsidianRequirements = {ore: 3, clay: 8}
+const geodeRequirements = {ore: 3, obsidian: 12}
 
 const materials = ['geode', 'obsidian', 'clay', 'ore']
 
@@ -84,6 +84,8 @@ for (let minute = 1; minute <= 24; minute++) {
   null
   materials.forEach(material => {
     collect[material]()
+  })
+  materials.forEach(material => {
     if (createRobotCountdown[material] >= 0) {
       if (createRobotCountdown[material] === 0) {
         robots[material]++
